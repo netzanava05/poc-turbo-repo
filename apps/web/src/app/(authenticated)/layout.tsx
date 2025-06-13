@@ -22,14 +22,12 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en">
-            <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-                <nav className="p-16 bg-gray-100">
-                    <a href="/" className="mr-4">Home</a>
-                    <a href="/user" className="mr-4">User</a>
-                </nav>
-                {children}
-            </body>
-        </html>
+        <div>
+            <nav className="p-16 bg-gray-100">
+                <a href="/" className="mr-4">Home</a>
+                <a href="/user" className="mr-4">User</a>
+            </nav>
+            {children}
+        </div>
     );
 }
