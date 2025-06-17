@@ -47,6 +47,10 @@ RUN pnpm build
 FROM base AS web
 WORKDIR /app
 
+# In the web and admin stages, after WORKDIR /app
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/web/node_modules ./apps/web/node_modules
+
 ENV NODE_ENV=production
 
 # Copy necessary files for the web app
@@ -54,7 +58,7 @@ COPY --from=builder /app/apps/web/next.config.ts ./
 COPY --from=builder /app/apps/web/package.json ./
 COPY --from=builder /app/apps/web/public ./public
 COPY --from=builder /app/apps/web/.next ./.next
-COPY --from=builder /app/apps/web/node_modules ./node_modules
+# COPY --from=builder /app/apps/web/node_modules ./node_modules
 
 # Expose port
 EXPOSE 3000
@@ -66,6 +70,10 @@ CMD ["pnpm", "start"]
 FROM base AS admin
 WORKDIR /app
 
+# In the web and admin stages, after WORKDIR /app
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/admin/node_modules ./apps/admin/node_modules
+
 ENV NODE_ENV=production
 
 # Copy necessary files for the admin app
@@ -73,7 +81,7 @@ COPY --from=builder /app/apps/admin/next.config.ts ./
 COPY --from=builder /app/apps/admin/package.json ./
 COPY --from=builder /app/apps/admin/public ./public
 COPY --from=builder /app/apps/admin/.next ./.next
-COPY --from=builder /app/apps/admin/node_modules ./node_modules
+# COPY --from=builder /app/apps/admin/node_modules ./node_modules
 
 # Expose port
 EXPOSE 3000
