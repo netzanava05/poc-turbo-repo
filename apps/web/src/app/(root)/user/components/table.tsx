@@ -5,14 +5,14 @@ import { DELETE_USER, EDIT_USER, SAVE_TRANSACTION } from "../../../../lib/graphq
 import { useMutation } from "@apollo/client";
 import { GET_ALL_USERS } from "../../../../lib/graphql/queries";
 
-interface Transaction {
+export interface Transaction {
   id: number;
   amount: number;
   userId: number;
   transactionType: string;
 }
 
-interface User {
+export interface User {
   id: number;
   firstName: string;
   lastName: string;

@@ -34,7 +34,6 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages/core/node_modules ./packages/core/node_modules
 COPY --from=deps /app/packages/ui/node_modules ./packages/ui/node_modules
 COPY --from=deps /app/packages/eslint-config/node_modules ./packages/eslint-config/node_modules
-COPY --from=deps /app/packages/typescript-config/node_modules ./packages/typescript-config/node_modules
 COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=deps /app/apps/admin/node_modules ./apps/admin/node_modules
 
@@ -48,19 +47,18 @@ RUN pnpm build
 FROM base AS web
 WORKDIR /app
 
-ENV NODE_ENV production
+# In the web and admin stages, after WORKDIR /app
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/web/node_modules ./apps/web/node_modules
+
+ENV NODE_ENV=production
 
 # Copy necessary files for the web app
 COPY --from=builder /app/apps/web/next.config.ts ./
 COPY --from=builder /app/apps/web/package.json ./
 COPY --from=builder /app/apps/web/public ./public
 COPY --from=builder /app/apps/web/.next ./.next
-COPY --from=builder /app/apps/web/node_modules ./node_modules
-
-# Create a non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-USER nextjs
+# COPY --from=builder /app/apps/web/node_modules ./node_modules
 
 # Expose port
 EXPOSE 3000
@@ -72,19 +70,18 @@ CMD ["pnpm", "start"]
 FROM base AS admin
 WORKDIR /app
 
-ENV NODE_ENV production
+# In the web and admin stages, after WORKDIR /app
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/admin/node_modules ./apps/admin/node_modules
+
+ENV NODE_ENV=production
 
 # Copy necessary files for the admin app
 COPY --from=builder /app/apps/admin/next.config.ts ./
 COPY --from=builder /app/apps/admin/package.json ./
 COPY --from=builder /app/apps/admin/public ./public
 COPY --from=builder /app/apps/admin/.next ./.next
-COPY --from=builder /app/apps/admin/node_modules ./node_modules
-
-# Create a non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-USER nextjs
+# COPY --from=builder /app/apps/admin/node_modules ./node_modules
 
 # Expose port
 EXPOSE 3000

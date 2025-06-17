@@ -11,23 +11,23 @@
     "generate": "graphql-codegen"
   },
   "dependencies": {
-    "@apollo/client": "^3.13.8",
-    "graphql": "^16.11.0",
-    "@grafana/faro-web-sdk": "^1.18.1",
-    "@grafana/faro-web-tracing": "^1.18.1",
+    "@apollo/client": "3.13.8",
+    "graphql": "16.11.0",
+    "@grafana/faro-web-sdk": "1.18.1",
+    "@grafana/faro-web-tracing": "1.18.1",
     "@repo/core": "workspace:*",
     "@repo/ui": "workspace:*",
-    "next": "^15.3.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "next": "15.3.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^22.14.0",
+    "@types/node": "22.14.0",
     "@types/react": "19.1.0",
     "@types/react-dom": "19.1.1",
-    "eslint": "^9.24.0",
+    "eslint": "9.24.0",
     "typescript": "5.8.2"
   }
 }
