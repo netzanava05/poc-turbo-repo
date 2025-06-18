@@ -1,7 +1,7 @@
 # Base Node.js image
 FROM node:18-alpine AS base
 
-# Install pnpm
+# Install pnpm globally
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
@@ -14,7 +14,7 @@ FROM base AS deps
 WORKDIR /app
 
 # Copy root package.json and workspace config
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY packages/core/package.json ./packages/core/package.json
 COPY packages/ui/package.json ./packages/ui/package.json
 COPY packages/eslint-config/package.json ./packages/eslint-config/package.json
@@ -22,7 +22,7 @@ COPY packages/typescript-config/package.json ./packages/typescript-config/packag
 COPY apps/web/package.json ./apps/web/package.json
 COPY apps/admin/package.json ./apps/admin/package.json
 
-# Install dependencies
+# Install dependencies with cache mount
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 # Builder stage
@@ -31,60 +31,89 @@ WORKDIR /app
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/core/node_modules ./packages/core/node_modules
-COPY --from=deps /app/packages/ui/node_modules ./packages/ui/node_modules
-COPY --from=deps /app/packages/eslint-config/node_modules ./packages/eslint-config/node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
-COPY --from=deps /app/apps/admin/node_modules ./apps/admin/node_modules
+COPY --from=deps /app/pnpm-lock.yaml ./pnpm-lock.yaml
 
 # Copy all source files
 COPY . .
 
-# Build the project
-RUN pnpm build
+# Build all packages and apps
+RUN pnpm turbo build
 
-# Production image, copy built app
-FROM base AS web
+# Web app production image
+FROM node:18-alpine AS web
 WORKDIR /app
 
-# In the web and admin stages, after WORKDIR /app
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/web/node_modules ./apps/web/node_modules
+# Install pnpm in production image
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
+# Set production environment
 ENV NODE_ENV=production
 
-# Copy necessary files for the web app
-COPY --from=builder /app/apps/web/next.config.ts ./
-COPY --from=builder /app/apps/web/package.json ./
-COPY --from=builder /app/apps/web/public ./public
-COPY --from=builder /app/apps/web/.next ./.next
-# COPY --from=builder /app/apps/web/node_modules ./node_modules
+# Create non-root user for security
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy workspace configuration
+COPY --chown=nextjs:nodejs package.json pnpm-workspace.yaml ./
+COPY --chown=nextjs:nodejs apps/web/package.json ./apps/web/package.json
+
+# Copy shared packages that web depends on
+COPY --from=builder --chown=nextjs:nodejs /app/packages ./packages
+
+# Copy built web application
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next ./apps/web/.next
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/next.config.ts ./apps/web/
+
+# Install only production dependencies
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile --filter=web
+
+# Switch to non-root user
+USER nextjs
 
 # Expose port
 EXPOSE 3000
 
-# Start command
-CMD ["pnpm", "start"]
+CMD ["pnpm", "turbo", "start", "--filter=web"]
 
-# Admin app image
-FROM base AS admin
+# Admin app production image
+FROM node:18-alpine AS admin
 WORKDIR /app
 
-# In the web and admin stages, after WORKDIR /app
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/admin/node_modules ./apps/admin/node_modules
+# Install pnpm in production image
+ENV PNPM_HOME="/pnpm"  
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
+# Set production environment
 ENV NODE_ENV=production
 
-# Copy necessary files for the admin app
-COPY --from=builder /app/apps/admin/next.config.ts ./
-COPY --from=builder /app/apps/admin/package.json ./
-COPY --from=builder /app/apps/admin/public ./public
-COPY --from=builder /app/apps/admin/.next ./.next
-# COPY --from=builder /app/apps/admin/node_modules ./node_modules
+# Create non-root user for security
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy workspace configuration
+COPY --chown=nextjs:nodejs package.json pnpm-workspace.yaml turbo.json ./
+COPY --chown=nextjs:nodejs apps/admin/package.json ./apps/admin/package.json
+
+# Copy shared packages
+COPY --from=builder --chown=nextjs:nodejs /app/packages ./packages
+
+# Copy built application
+COPY --from=builder --chown=nextjs:nodejs /app/apps/admin/.next ./apps/admin/.next
+COPY --from=builder --chown=nextjs:nodejs /app/apps/admin/public ./apps/admin/public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/admin/next.config.ts ./apps/admin/
+COPY --from=builder --chown=nextjs:nodejs /app/apps/admin/package.json ./apps/admin/
+
+# Install only production dependencies
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile --filter=admin
+
+# Switch to non-root user
+USER nextjs
 
 # Expose port
-EXPOSE 3000
+EXPOSE 3001
 
-# Start command
-CMD ["pnpm", "start"]
+CMD ["pnpm", "turbo", "start", "--filter=admin"]

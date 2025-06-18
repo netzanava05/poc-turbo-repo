@@ -1,0 +1,11 @@
+node_modules
+.next
+.turbo
+.git
+.env*
+*.log
+Dockerfile
+.dockerignore
+dist
+build
+coverage
