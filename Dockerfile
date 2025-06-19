@@ -37,7 +37,9 @@ COPY --from=deps /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY . .
 
 # Build all packages and apps
-RUN pnpm turbo build
+RUN pnpm turbo build --verbose || \
+    (echo "=== Turbo build failed, using direct pnpm build ===" && \
+     cd apps/web && pnpm run build && cd ../admin && pnpm run build)
 
 # Web app production image
 FROM node:18-alpine AS web
